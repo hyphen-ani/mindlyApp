@@ -13,47 +13,48 @@ export async function POST(request: Request){
         const existingUserVerifiedByUsername = await UserModel.findOne({
             username,
             isVerified: true
-        })
+        });
 
         if (existingUserVerifiedByUsername) {
-            return Response.json({
+            return Response.json(
+                {
                     success: false,
                     message: "Username is already taken"
 
                 },{status: 400}
-            )
+            );
         }
 
-        const existingUserByEmail =  await UserModel.findOne({
-            email
-        })
-
-        const verifyCode = Math.floor(100000 + Math.random() * 900000).toString()
+        const existingUserByEmail =  await UserModel.findOne({email});
+        let verifyCode = Math.floor(100000 + Math.random() * 900000).toString()
 
         if(existingUserByEmail){
             if(existingUserByEmail.isVerified){
-                return Response.json({
+                return Response.json(
+                {
                     success: false,
                     message: "User Already Exists With This Email"
-                }, {status: 400})
+                }, {status: 400}
+            );
             } else {
                 const hashedPassword = await bycrypt.hash(password, 10);
                 existingUserByEmail.password = hashedPassword;
                 existingUserByEmail.verifyCode = verifyCode;
-                existingUserByEmail.verifyCodeExpiry = new Date(Date.now() + 3600000)
+                existingUserByEmail.verifyCodeExpiry = new Date(Date.now() + 3600000);
+                await existingUserByEmail.save();
             }
 
         }else{
             const hashedPassword = await bycrypt.hash(password, 10); 
-            const expiryDate = new Date()
-            expiryDate.setHours(expiryDate.getHours() + 1)
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 1);
 
             const newUser = new UserModel({
                 username,
                 email,
-                hashedPassword,
+                password: hashedPassword,
                 verifyCode,
-                verifyCodeExp: expiryDate,
+                verifyCodeExpiry: expiryDate,
                 isVerified: false,
                 isAcceptingMessage: true,
                 messages: []
@@ -79,7 +80,7 @@ export async function POST(request: Request){
         }, {status: 201})
 
     } catch (error) {
-        console.error('Error Registering User')
+        console.error('Error Registering User', error)
         return Response.json(
             {
             success: false,
